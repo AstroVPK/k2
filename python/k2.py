@@ -22,16 +22,16 @@ class k2LC(libcarma.basicLC):
 	k2sc = ['k2sc', 'aigrain']
 	k2varcat = ['k2varcat', 'armstrong']
 
-	def _getCanonicalFileName(self, name, campaign, lcType):
+	def _getCanonicalFileName(self, name, campaign, processing):
 		fileName = ''
-		if lcType in self.sap or lcType in self.pdcsap:
+		if processing in self.sap or processing in self.pdcsap:
 			fileName = ''.join(['ktwo', name, '-', campaign, '_llc.dat'])
-		elif lcType in self.k2sff or lcType in self.k2sc or lcType in self.k2varcat:
-			if lcType in self.k2sff:
+		elif processing in self.k2sff or processing in self.k2sc or processing in self.k2varcat:
+			if processing in self.k2sff:
 				fileName = ''.join(['hlsp_k2sff_k2_lightcurve_' ,name, '-', campaign, '_kepler_v1_llc.dat'])
-			elif lcType in self.k2sc:
+			elif processing in self.k2sc:
 				fileName = ''.join(['hlsp_k2sc_k2_llc_', name, '-', campaign, '_kepler_v1_lc.dat'])
-			elif lcType in self.k2varcat:
+			elif processing in self.k2varcat:
 				fileName = ''.join(['hlsp_k2varcat_k2_lightcurve_', name, '-', campaign, '_kepler_v2_llc.dat'])
 			else:
 				raise ValueError('Unrecognized k2LC type')
@@ -98,8 +98,8 @@ class k2LC(libcarma.basicLC):
 		if not os.path.isfile(filePath):
 			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
 
-	def _readMAST(self, name, campaign, path, lcType):
-		fileName = self._getCanonicalFileName(name, campaign, lcType)
+	def _readMAST(self, name, campaign, path, processing):
+		fileName = self._getCanonicalFileName(name, campaign, processing)
 		filePath = os.path.join(path, fileName)
 		with open(filePath,'r') as k2File:
 			allLines = k2File.readlines()
@@ -127,7 +127,7 @@ class k2LC(libcarma.basicLC):
 			self.cadence[i] = int(words[2])
 			if words[9] == '0':
 				self.t[i] = float(words[0]) - self.startT
-				if lcType in self.sap:
+				if processing in self.sap:
 					try:
 						self.y[i] = float(words[3])
 						self.yerr[i] = float(words[4])
@@ -136,7 +136,7 @@ class k2LC(libcarma.basicLC):
 						self.y[i] = 0.0
 						self.yerr[i] = math.sqrt(sys.float_info[0])
 						self.mask[i] = 0.0
-				elif lcType  in self.pdcsap:
+				elif processing  in self.pdcsap:
 					try:
 						self.y[i] = float(words[7])
 						self.yerr[i] = float(words[8])
@@ -157,11 +157,173 @@ class k2LC(libcarma.basicLC):
 		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
 		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
 
+	def _readK2SFF(self, name, campaign, path, processing):
+		fileNameMAST = self._getCanonicalFileName(name, campaign, 'mast')
+		filePathMAST = os.path.join(path, fileNameMAST)
+		with open(filePathMAST, 'r') as k2FileMAST:
+			allLinesMAST = k2FileMAST.readlines()
+		self._numCadences = len(allLinesMAST) - 1
+		startT = -1.0
+		lineNum = 1
+		while startT == -1.0:
+			words = allLinesMAST[lineNum].split()
+			nextWords = allLinesMAST[lineNum + 1].split()
+			if words[0] != '""' and nextWords[0] != '""':
+				startT = float(words[0])
+				dt = float(nextWords[0]) - float(words[0])
+			else:
+				lineNum += 1
+		self.startT = startT
+		self._dt = dt ## Increment between epochs.
+		self.cadence = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.t = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.x = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.y = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.yerr = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.mask = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E']) ## Numpy array of mask values.
+		for i in xrange(self.numCadences):
+			words = allLinesMAST[i + 1].split()
+			self.cadence[i] = int(words[2])
+			if words[9] == '0':
+				self.t[i] = float(words[0]) - self.startT
+			else:
+				if words[0] != '""':
+					self.t[i] = float(words[0]) - self.startT
+				else:
+					self.t[i] = self.t[i - 1] + self.dt
+		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
+		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+
+		fileName = self._getCanonicalFileName(name, campaign, 'k2sff')
+		filePath = os.path.join(path, fileName)
+		with open(filePath,'r') as k2File:
+			allLines = k2File.readlines()
+		for line in allLines[1:]:
+			words = line.rstrip('\n').split()
+			cadNum = int(words[5])
+			index = np.where(self.cadence == cadNum)[0][0]
+			self.t[index] = float(words[0]) - self.startT
+			self.y[index] = float(words[2])
+			self.mask[index] = 1.0
+
+		valSum = 0.0
+		countSum = 0.0
+		for i in xrange(self.numCadences - 1):
+			valSum += self.mask[i + 1]*self.mask[i]*math.pow((self.y[i + 1] - self.y[i]), 2.0)
+			countSum += self.mask[i + 1]*self.mask[i]
+		noise = math.sqrt(valSum/countSum)
+		for i in xrange(self.numCadences):
+			if self.mask[i] == 1.0:
+				self.yerr[i] = noise
+
+	def _readK2SC(self, name, campaign, path, processing):
+		fileNameMAST = self._getCanonicalFileName(name, campaign, 'mast')
+		filePathMAST = os.path.join(path, fileNameMAST)
+		with open(filePathMAST, 'r') as k2FileMAST:
+			allLinesMAST = k2FileMAST.readlines()
+		self._numCadences = len(allLinesMAST) - 1
+		startT = -1.0
+		lineNum = 1
+		while startT == -1.0:
+			words = allLinesMAST[lineNum].split()
+			nextWords = allLinesMAST[lineNum + 1].split()
+			if words[0] != '""' and nextWords[0] != '""':
+				startT = float(words[0])
+				dt = float(nextWords[0]) - float(words[0])
+			else:
+				lineNum += 1
+		self.startT = startT
+		self._dt = dt ## Increment between epochs.
+		self.cadence = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.t = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.x = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.y = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.yerr = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.mask = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E']) ## Numpy array of mask values.
+		for i in xrange(self.numCadences):
+			words = allLinesMAST[i + 1].split()
+			self.cadence[i] = int(words[2])
+			if words[9] == '0':
+				self.t[i] = float(words[0]) - self.startT
+			else:
+				if words[0] != '""':
+					self.t[i] = float(words[0]) - self.startT
+				else:
+					self.t[i] = self.t[i - 1] + self.dt
+		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
+		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+
+		fileName = self._getCanonicalFileName(name, campaign, 'k2sc')
+		filePath = os.path.join(path, fileName)
+		with open(filePath,'r') as k2File:
+			allLines = k2File.readlines()
+		for line in allLines[1:]:
+			words = line.rstrip('\n').split()
+			if int(words[7]) == 0: 
+				time = float(words[0]) - self.startT
+				index = np.where(self.t == time)[0][0]
+				self.y[index] = float(words[8])
+				self.yerr[index] = float(words[6])
+				self.mask[index] = 1.0
+
+	def _readK2VARCAT(self, name, campaign, path, processing):
+		fileNameMAST = self._getCanonicalFileName(name, campaign, 'mast')
+		filePathMAST = os.path.join(path, fileNameMAST)
+		with open(filePathMAST, 'r') as k2FileMAST:
+			allLinesMAST = k2FileMAST.readlines()
+		self._numCadences = len(allLinesMAST) - 1
+		startT = -1.0
+		lineNum = 1
+		while startT == -1.0:
+			words = allLinesMAST[lineNum].split()
+			nextWords = allLinesMAST[lineNum + 1].split()
+			if words[0] != '""' and nextWords[0] != '""':
+				startT = float(words[0])
+				dt = float(nextWords[0]) - float(words[0])
+			else:
+				lineNum += 1
+		self.startT = startT
+		self._dt = dt ## Increment between epochs.
+		self.cadence = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.t = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.x = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.y = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.yerr = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.mask = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E']) ## Numpy array of mask values.
+		for i in xrange(self.numCadences):
+			words = allLinesMAST[i + 1].split()
+			self.cadence[i] = int(words[2])
+			if words[9] == '0':
+				self.t[i] = float(words[0]) - self.startT
+			else:
+				if words[0] != '""':
+					self.t[i] = float(words[0]) - self.startT
+				else:
+					self.t[i] = self.t[i - 1] + self.dt
+		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
+		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+
+		fileName = self._getCanonicalFileName(name, campaign, 'k2varcat')
+		filePath = os.path.join(path, fileName)
+		try:
+			k2File = open(filePath,'r')
+		except IOError:
+			pass
+		else:
+			allLines = k2File.readlines()
+			for line in allLines[1:]:
+				words = line.rstrip('\n').split()
+				time = float(words[0]) - self.startT
+				index = np.where(self.t == time)[0][0]
+				self.y[index] = float(words[3])
+				self.yerr[index] = float(words[4])
+				self.mask[index] = 1.0
+			k2File.close()
 
 	def read(self, name, band = None, path = None, **kwargs):
-		lcType = kwargs.get('lctype', 'sap').lower()
+		processing = kwargs.get('processing', 'sap').lower()
 		campaign = kwargs.get('campaign', 'c05').lower()
-		fileName = self._getCanonicalFileName(name, campaign, lcType)
+		fileName = self._getCanonicalFileName(name, campaign, processing)
 		goid = kwargs.get('goid', '').lower()
 		gopi = kwargs.get('gopi', '').lower()
 		if path is None:
@@ -192,13 +354,20 @@ class k2LC(libcarma.basicLC):
 		self._name = str(name) ## The name of the light curve (usually the object's name).
 		self._band = str(r'Kep') ## The name of the photometric band (eg. HSC-I or SDSS-g etc..).
 		self._xunit = r'$d$' ## Unit in which time is measured (eg. s, sec, seconds etc...).
-		self._yunit = r'$who the f**** knows?$' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
+		self._yunit = r'who the f*** knows?' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
 
 		self._getMAST(name, campaign, path, goid, gopi)
 		self._getHLSP(name, campaign, path)
 
-		if lcType in self.sap or lcType in self.pdcsap:
-			self._readMAST(name, campaign, path, lcType)
+		if processing in self.sap or processing in self.pdcsap:
+			self._readMAST(name, campaign, path, processing)
+		elif processing in self.k2sff:
+			self._readK2SFF(name, campaign, path, processing)
+		elif processing in self.k2sc:
+			self._readK2SC(name, campaign, path, processing)
+		elif processing in self.k2varcat:
+			self._readK2VARCAT(name, campaign, path, processing)
+
 		count = int(np.sum(self.mask))
 		y_meanSum = 0.0
 		yerr_meanSum = 0.0
@@ -229,13 +398,16 @@ class k2LC(libcarma.basicLC):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-id', '--ID', type = str, default = '205905563', help = r'EPIC ID')
-	parser.add_argument('-lcType', '--lcType', type = str, default = 'sap', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
+	parser.add_argument('-p', '--processing', type = str, default = 'sap', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
 	parser.add_argument('-c', '--campaign', type = str, default = 'c03', help = r'Campaign')
-	parser.add_argument('-goid', '--goID', type = str, default = '3004', help = r'Guest Observer ID')
-	parser.add_argument('-gopi', '--goPI', type = str, default = 'Edelson', help = r'Guest Observer PI')
+	parser.add_argument('-goid', '--goID', type = str, default = '', help = r'Guest Observer ID')
+	parser.add_argument('-gopi', '--goPI', type = str, default = '', help = r'Guest Observer PI')
 	args = parser.parse_args()
 
-	LC = k2LC(name = args.ID, band = 'Kep', lcType = args.lcType, campaign = args.campaign, goid = args.goID, gopi = args.goPI)
+	LC = k2LC(name = args.ID, band = 'Kep', processing = args.processing, campaign = args.campaign, goid = args.goID, gopi = args.goPI)
+
 	LC.plot()
-	plt.show()
+	LC.plotacf()
+	LC.plotsf()
+	plt.show(False)
 	pdb.set_trace()
