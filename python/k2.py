@@ -1,6 +1,6 @@
 import math as math
 import numpy as np
-import urllib
+import urllib, urllib2
 import os as os
 import sys as sys
 import subprocess
@@ -71,8 +71,13 @@ class k2LC(libcarma.basicLC):
 			name1Dir = ''.join([name[0:4], '00000'])
 			name2Dir = name[4:]
 			fullURL = '/'.join([baseURL, 'k2sff', campaign, name1Dir, name2Dir, fileNameFits])
-			result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath):
+			try:
+				ret = urllib2.urlopen(fullURL)
+			except urllib2.HTTPError:
+				pass
+			else:
+				result = urllib.urlretrieve(fullURL, filePathFits)
+		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
 			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
 
 		fileName = self._getCanonicalFileName(name, campaign, 'k2sc')
@@ -82,8 +87,13 @@ class k2LC(libcarma.basicLC):
 		if not os.path.isfile(filePathFits):
 			name1Dir = ''.join([name[0:4], '00000'])
 			fullURL = '/'.join([baseURL, 'k2sc', campaign, name1Dir, fileNameFits])
-			result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath):
+			try:
+				ret = urllib2.urlopen(fullURL)
+			except urllib2.HTTPError:
+				pass
+			else:
+				result = urllib.urlretrieve(fullURL, filePathFits)
+		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
 			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
 
 		fileName = self._getCanonicalFileName(name, campaign, 'k2varcat')
@@ -94,8 +104,13 @@ class k2LC(libcarma.basicLC):
 			name1Dir = ''.join([name[0:4], '00000'])
 			name2Dir = ''.join([name[4:6], '000'])
 			fullURL = '/'.join([baseURL, 'k2varcat', campaign, name1Dir, name2Dir, fileNameFits])
-			result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath):
+			try:
+				ret = urllib2.urlopen(fullURL)
+			except urllib2.HTTPError:
+				pass
+			else:
+				result = urllib.urlretrieve(fullURL, filePathFits)
+		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
 			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
 
 	def _readMAST(self, name, campaign, path, processing):
@@ -410,4 +425,3 @@ if __name__ == '__main__':
 	LC.plotacf()
 	LC.plotsf()
 	plt.show(False)
-	pdb.set_trace()
