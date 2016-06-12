@@ -199,6 +199,7 @@ class k2LC(libcarma.basicLC):
 		for i in xrange(self.numCadences):
 			words = allLinesMAST[i + 1].split()
 			self.cadence[i] = int(words[2])
+			self.yerr[i] = math.sqrt(sys.float_info[0])
 			if words[9] == '0':
 				self.t[i] = float(words[0]) - self.startT
 			else:
@@ -258,6 +259,7 @@ class k2LC(libcarma.basicLC):
 		for i in xrange(self.numCadences):
 			words = allLinesMAST[i + 1].split()
 			self.cadence[i] = int(words[2])
+			self.yerr[i] = math.sqrt(sys.float_info[0])
 			if words[9] == '0':
 				self.t[i] = float(words[0]) - self.startT
 			else:
@@ -308,6 +310,7 @@ class k2LC(libcarma.basicLC):
 		for i in xrange(self.numCadences):
 			words = allLinesMAST[i + 1].split()
 			self.cadence[i] = int(words[2])
+			self.yerr[i] = math.sqrt(sys.float_info[0])
 			if words[9] == '0':
 				self.t[i] = float(words[0]) - self.startT
 			else:
@@ -369,7 +372,8 @@ class k2LC(libcarma.basicLC):
 		self._name = str(name) ## The name of the light curve (usually the object's name).
 		self._band = str(r'Kep') ## The name of the photometric band (eg. HSC-I or SDSS-g etc..).
 		self._xunit = r'$d$' ## Unit in which time is measured (eg. s, sec, seconds etc...).
-		self._yunit = r'who the f*** knows?' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
+		#self._yunit = r'who the f*** knows?' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
+		self._yunit = r'$F$' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
 
 		self._getMAST(name, campaign, path, goid, gopi)
 		self._getHLSP(name, campaign, path)

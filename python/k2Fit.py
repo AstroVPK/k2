@@ -39,11 +39,12 @@ fwid = 16
 set_plot_params(useTex = True)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-pwd', '--pwd', type = str, default = os.path.join(os.environ['LIBCARMA'],'examples/data'), help = r'Path to working directory')
-parser.add_argument('-n', '--name', type = str, default = 'ktwo212141173-c05_llc.csv', help = r'K2 Filename')
-parser.add_argument('-lct', '--lctype', type = str, default = 'raw', help = r'What processing to use? eg. raw, pdcsap, uncal, mast etc...')
+parser.add_argument('-id', '--id', type = str, default = '205905563', help = r'EPIC ID')
+parser.add_argument('-p', '--processing', type = str, default = 'sap', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
+parser.add_argument('-c', '--campaign', type = str, default = 'c03', help = r'Campaign')
+parser.add_argument('-goid', '--goid', type = str, default = '', help = r'Guest Observer ID')
+parser.add_argument('-gopi', '--gopi', type = str, default = '', help = r'Guest Observer PI')
 parser.add_argument('-libcarmaChain', '--lC', type = str, default = 'libcarmaChain', help = r'libcarma Chain Filename')
-parser.add_argument('-cmcmcChain', '--cC', type = str, default = 'cmcmcChain', help = r'carma_pack Chain Filename')
 parser.add_argument('-nsteps', '--nsteps', type = int, default = 250, help = r'Number of steps per walker')
 parser.add_argument('-nwalkers', '--nwalkers', type = int, default = 25*psutil.cpu_count(logical = True), help = r'Number of walkers')
 parser.add_argument('-pMax', '--pMax', type = int, default = 1, help = r'Maximum C-AR order')
@@ -81,7 +82,7 @@ if (args.pMin < 1):
 if (args.qMin < 0):
 	raise ValueError('qMin must be greater than or equal to 0')
 
-LC = k2.k2LC(name = args.name, band = r'Kepler', pwd = args.pwd, lctype = args.lctype)
+LC = k2.k2LC(name = args.id, band = 'Kep', processing = args.processing, campaign = args.campaign, goid = args.goid, gopi = args.gopi)
 
 LC.minTimescale = args.minTimescale
 LC.maxTimescale = args.maxTimescale
@@ -175,20 +176,25 @@ if args.viewer:
 		if var == 'n':
 			notDone = False
 
-Theta = bestTask.Chain[:,np.where(bestTask.LnPosterior == np.max(bestTask.LnPosterior))[0][0],np.where(bestTask.LnPosterior == np.max(bestTask.LnPosterior))[1][0]]
+loc0 = np.where(bestTask.LnPosterior == np.max(bestTask.LnPosterior))[0][0]
+loc1 = np.where(bestTask.LnPosterior == np.max(bestTask.LnPosterior))[1][0]
+
+lbls = list()
+for i in xrange(pBest):
+	lbls.append(r'$\tau_{AR, %d}$ ($d$)'%(i + 1))
+for i in xrange(qBest):
+	lbls.append(r'$\tau_{MA, %d} ($d$)$'%(i))
+lbls.append(r'Amp. ($F$ $d^{%2.1f}$)'%(qBest + 0.5 - pBest))
+mcmcviz.vizTriangle(pBest, qBest, bestTask.timescaleChain, labelList = lbls, figTitle = r'Kepler EPIC ID %s from %s; %s processing; GO ID: %s GO PI: %s'%(args.id, args.campaign, args.processing, args.goid, args.gopi))
+
+Theta = bestTask.Chain[:, loc0, loc1]
 nt = libcarma.basicTask(pBest, qBest)
 nt.set(LC.dt, Theta)
 nt.smooth(LC)
 LC.plot()
+bestTask.plotsf(LC)
+bestTask.plotacf(LC)
 
-plt.figure(1, figsize = (fwid, fhgt))
-lagsEst, sfEst, sferrEst = LC.sf()
-lagsModel, sfModel = bestTask.sf(start = lagsEst[1], stop = lagsEst[-1], num = 5000, spacing = 'log')
-plt.loglog(lagsModel, sfModel, label = r'$SF(\delta t)$ (model)', color = '#000000', zorder = 5)
-plt.errorbar(lagsEst, sfEst, sferrEst, label = r'$SF(\delta t)$ (est)', fmt = 'o', capsize = 0, color = '#ff7f00', markeredgecolor = 'none', zorder = 0)
-plt.xlabel(r'$\log_{10}\delta t$')
-plt.ylabel(r'$\log_{10} SF$')
-plt.legend(loc = 2)
 plt.show()
 
 if args.stop:
