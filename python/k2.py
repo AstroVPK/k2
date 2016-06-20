@@ -58,7 +58,9 @@ class k2LC(libcarma.basicLC):
 			fullURL = '/'.join([baseURL, camp, name1Dir, name2Dir, fileNameFits])
 			result = urllib.urlretrieve(fullURL, filePathFits)
 		if not os.path.isfile(filePath):
-			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
+			#must source bash_profile to open a login terminal, necessary for Mac since there is no bashrc 
+			topcatString = ['source ~/.bash_profile;' , 'topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)]
+			subprocess.call(topcatString, shell=True)
 
 	def _getHLSP(self, name, campaign, path):
 		baseURL = 'http://archive.stsci.edu/missions/hlsp'
