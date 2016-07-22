@@ -350,7 +350,7 @@ class k2LC(libcarma.basicLC):
 			try:
 				path = os.environ['K2DATADIR']
 			except KeyError:
-				raise KeyError('Environment variable "K2DATADIR" not set! Please set "K2DATADIR" to where all K2 data should live first...')
+				raise KeyError('Environment variable "K2DATADIR" not set! Please set "K2DATADIR" to point where all K2 data should live first...')
 		filePath = os.path.join(path, fileName)
 
 		self._computedCadenceNum = -1

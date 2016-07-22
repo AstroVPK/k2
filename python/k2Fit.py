@@ -39,9 +39,9 @@ fwid = 16
 set_plot_params(useTex = True)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-id', '--id', type = str, default = '205905563', help = r'EPIC ID')
-parser.add_argument('-p', '--processing', type = str, default = 'sap', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
-parser.add_argument('-c', '--campaign', type = str, default = 'c03', help = r'Campaign')
+parser.add_argument('-id', '--id', type = str, default = '211991001', help = r'EPIC ID')
+parser.add_argument('-p', '--processing', type = str, default = 'k2sff', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
+parser.add_argument('-c', '--campaign', type = str, default = 'c05', help = r'Campaign')
 parser.add_argument('-goid', '--goid', type = str, default = '', help = r'Guest Observer ID')
 parser.add_argument('-gopi', '--gopi', type = str, default = '', help = r'Guest Observer PI')
 parser.add_argument('-libcarmaChain', '--lC', type = str, default = 'libcarmaChain', help = r'libcarma Chain Filename')
