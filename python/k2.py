@@ -21,18 +21,21 @@ class k2LC(libcarma.basicLC):
 	k2sff = ['k2sff', 'vj', 'vanderburg', 'vanderburgjohnson', 'vanderburg-johnson']
 	k2sc = ['k2sc', 'aigrain']
 	k2varcat = ['k2varcat', 'armstrong']
+	everest = ['everest', 'luger']
 
 	def _getCanonicalFileName(self, name, campaign, processing):
 		fileName = ''
 		if processing in self.sap or processing in self.pdcsap:
 			fileName = ''.join(['ktwo', name, '-', campaign, '_llc.dat'])
-		elif processing in self.k2sff or processing in self.k2sc or processing in self.k2varcat:
+		elif processing in self.k2sff or processing in self.k2sc or processing in self.k2varcat or processing in self.everest:
 			if processing in self.k2sff:
 				fileName = ''.join(['hlsp_k2sff_k2_lightcurve_' ,name, '-', campaign, '_kepler_v1_llc.dat'])
 			elif processing in self.k2sc:
 				fileName = ''.join(['hlsp_k2sc_k2_llc_', name, '-', campaign, '_kepler_v1_lc.dat'])
 			elif processing in self.k2varcat:
 				fileName = ''.join(['hlsp_k2varcat_k2_lightcurve_', name, '-', campaign, '_kepler_v2_llc.dat'])
+			elif processing in self.everest:
+				fileName = ''.join(['hlsp_everest_k2_llc_', name, '-', campaign, '_kepler_v1.0_lc.dat'])
 			else:
 				raise ValueError('Unrecognized k2LC type')
 		else:
@@ -106,6 +109,23 @@ class k2LC(libcarma.basicLC):
 			name1Dir = ''.join([name[0:4], '00000'])
 			name2Dir = ''.join([name[4:6], '000'])
 			fullURL = '/'.join([baseURL, 'k2varcat', campaign, name1Dir, name2Dir, fileNameFits])
+			try:
+				ret = urllib2.urlopen(fullURL)
+			except urllib2.HTTPError:
+				pass
+			else:
+				result = urllib.urlretrieve(fullURL, filePathFits)
+		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
+			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
+
+		fileName = self._getCanonicalFileName(name, campaign, 'everest')
+		fileNameFits = ''.join([fileName[0:-3], 'fits'])
+		filePath = os.path.join(path, fileName)
+		filePathFits = os.path.join(path, fileNameFits)
+		if not os.path.isfile(filePathFits):
+			name1Dir = ''.join([name[0:4], '00000'])
+			name2Dir = ''.join([name[4:]])
+			fullURL = '/'.join([baseURL, 'everest', campaign, name1Dir, name2Dir, fileNameFits])
 			try:
 				ret = urllib2.urlopen(fullURL)
 			except urllib2.HTTPError:
@@ -340,12 +360,85 @@ class k2LC(libcarma.basicLC):
 				self.mask[index] = 1.0
 			k2File.close()
 
+	def _readEVEREST(self, name, campaign, path, processing):
+		fileNameMAST = self._getCanonicalFileName(name, campaign, 'mast')
+		filePathMAST = os.path.join(path, fileNameMAST)
+		with open(filePathMAST, 'r') as k2FileMAST:
+			allLinesMAST = k2FileMAST.readlines()
+		self._numCadences = len(allLinesMAST) - 1
+		startT = -1.0
+		lineNum = 1
+		while startT == -1.0:
+			words = allLinesMAST[lineNum].split()
+			nextWords = allLinesMAST[lineNum + 1].split()
+			if words[0] != '""' and nextWords[0] != '""':
+				startT = float(words[0])
+				dt = float(nextWords[0]) - float(words[0])
+			else:
+				lineNum += 1
+		self.startT = startT
+		self._dt = dt ## Increment between epochs.
+		self.cadence = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.t = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.x = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.y = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.yerr = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E'])
+		self.mask = np.require(np.zeros(self.numCadences), requirements=['F', 'A', 'W', 'O', 'E']) ## Numpy array of mask values.
+		for i in xrange(self.numCadences):
+			words = allLinesMAST[i + 1].split()
+			self.cadence[i] = int(words[2])
+			self.yerr[i] = math.sqrt(sys.float_info[0])
+			if words[9] == '0':
+				self.t[i] = float(words[0]) - self.startT
+			else:
+				if words[0] != '""':
+					self.t[i] = float(words[0]) - self.startT
+				else:
+					self.t[i] = self.t[i - 1] + self.dt
+		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
+		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+
+		fileName = self._getCanonicalFileName(name, campaign, 'everest')
+		filePath = os.path.join(path, fileName)
+		try:
+			k2File = open(filePath,'r')
+		except IOError:
+			pass
+		else:
+			allLines = k2File.readlines()
+			for line in allLines[1:]:
+				words = line.rstrip('\n').split()
+				try:
+					time = float(words[0]) - self.startT
+				except ValueError:
+					pass
+				else:
+					index = np.where(self.t == time)[0][0]
+					try:
+						self.y[index] = float(words[1])
+					except ValueError:
+						pass
+					else:
+						#self.yerr[index] = (float(words[5])/float(words[4]))*float(words[1]) ### Just proportionate errors for now!
+						self.mask[index] = 1.0
+		k2File.close()
+		valSum = 0.0
+		countSum = 0.0
+		for i in xrange(self.numCadences - 1):
+			valSum += self.mask[i + 1]*self.mask[i]*math.pow((self.y[i + 1] - self.y[i]), 2.0)
+			countSum += self.mask[i + 1]*self.mask[i]
+		noise = math.sqrt(valSum/countSum)
+		for i in xrange(self.numCadences):
+			if self.mask[i] == 1.0:
+				self.yerr[i] = noise
+
 	def read(self, name, band = None, path = None, **kwargs):
-		processing = kwargs.get('processing', 'sap').lower()
-		campaign = kwargs.get('campaign', 'c05').lower()
-		fileName = self._getCanonicalFileName(name, campaign, processing)
-		goid = kwargs.get('goid', '').lower()
-		gopi = kwargs.get('gopi', '').lower()
+		self.z = kwargs.get('z', 0.0)
+		self.processing = kwargs.get('processing', 'k2sff').lower()
+		self.campaign = kwargs.get('campaign', 'c05').lower()
+		fileName = self._getCanonicalFileName(name, self.campaign, self.processing)
+		self.goid = kwargs.get('goid', '').lower()
+		self.gopi = kwargs.get('gopi', '').lower()
 		if path is None:
 			try:
 				path = os.environ['K2DATADIR']
@@ -377,17 +470,22 @@ class k2LC(libcarma.basicLC):
 		#self._yunit = r'who the f*** knows?' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
 		self._yunit = r'$F$' ## Unit in which the flux is measured (eg Wm^{-2} etc...).
 
-		self._getMAST(name, campaign, path, goid, gopi)
-		self._getHLSP(name, campaign, path)
+		self._getMAST(name, self.campaign, path, self.goid, self.gopi)
+		self._getHLSP(name, self.campaign, path)
 
-		if processing in self.sap or processing in self.pdcsap:
-			self._readMAST(name, campaign, path, processing)
-		elif processing in self.k2sff:
-			self._readK2SFF(name, campaign, path, processing)
-		elif processing in self.k2sc:
-			self._readK2SC(name, campaign, path, processing)
-		elif processing in self.k2varcat:
-			self._readK2VARCAT(name, campaign, path, processing)
+		if self.processing in self.sap or self.processing in self.pdcsap:
+			self._readMAST(name, self.campaign, path, self.processing)
+		elif self.processing in self.k2sff:
+			self._readK2SFF(name, self.campaign, path, self.processing)
+		elif self.processing in self.k2sc:
+			self._readK2SC(name, self.campaign, path, self.processing)
+		elif self.processing in self.k2varcat:
+			self._readK2VARCAT(name, self.campaign, path, self.processing)
+		elif self.processing in self.everest:
+			self._readEVEREST(name, self.campaign, path, self.processing)
+
+		for i in xrange(self._numCadences):
+			self.t[i] = self.t[i]/(1.0 + self.z)
 
 		count = int(np.sum(self.mask))
 		y_meanSum = 0.0
@@ -418,14 +516,15 @@ class k2LC(libcarma.basicLC):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-id', '--ID', type = str, default = '205905563', help = r'EPIC ID')
-	parser.add_argument('-p', '--processing', type = str, default = 'sap', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
-	parser.add_argument('-c', '--campaign', type = str, default = 'c03', help = r'Campaign')
-	parser.add_argument('-goid', '--goID', type = str, default = '', help = r'Guest Observer ID')
-	parser.add_argument('-gopi', '--goPI', type = str, default = '', help = r'Guest Observer PI')
+	parser.add_argument('-id', '--ID', type = str, default = '211991001', help = r'EPIC ID')
+	parser.add_argument('-z', '--z', type = float, default = '0.3056', help = r'object redshift')
+	parser.add_argument('-p', '--processing', type = str, default = 'k2sff', help = r'sap/pdcsap/k2sff/k2sc/k2varcat etc...')
+	parser.add_argument('-c', '--campaign', type = str, default = 'c05', help = r'Campaign')
+	parser.add_argument('-goid', '--goID', type = str, default = 'Edelson, Wehrle, Carini, Olling', help = r'Guest Observer ID')
+	parser.add_argument('-gopi', '--goPI', type = str, default = 'GO5038, GO5053, GO5056, GO5096', help = r'Guest Observer PI')
 	args = parser.parse_args()
 
-	LC = k2LC(name = args.ID, band = 'Kep', processing = args.processing, campaign = args.campaign, goid = args.goID, gopi = args.goPI)
+	LC = k2LC(name = args.ID, band = 'Kep', z = args.z,  processing = args.processing, campaign = args.campaign, goid = args.goID, gopi = args.goPI)
 
 	LC.plot()
 	LC.plotacf()
