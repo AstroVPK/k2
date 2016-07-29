@@ -191,8 +191,11 @@ class k2LC(libcarma.basicLC):
 					self.t[i] = self.t[i - 1] + self.dt
 				self.yerr[i] = math.sqrt(sys.float_info[0])
 				self.mask[i] = 0.0
-		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
-		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+		self._dt = float(self.t[1] - self.t[0])
+		self._mindt = float(np.nanmin(self.t[1:] - self.t[:-1]))
+		self._maxdt = float(np.nanmax(self.t[1:] - self.t[:-1]))
+		self._meandt = float(np.nanmean(self.t[1:] - self.t[:-1]))
+		self._T = float(self.t[-1] - self.t[0])
 
 	def _readK2SFF(self, name, campaign, path, processing):
 		fileNameMAST = self._getCanonicalFileName(name, campaign, 'mast')
@@ -229,8 +232,11 @@ class k2LC(libcarma.basicLC):
 					self.t[i] = float(words[0]) - self.startT
 				else:
 					self.t[i] = self.t[i - 1] + self.dt
-		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
-		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+		self._dt = float(self.t[1] - self.t[0])
+		self._mindt = float(np.nanmin(self.t[1:] - self.t[:-1]))
+		self._maxdt = float(np.nanmax(self.t[1:] - self.t[:-1]))
+		self._meandt = float(np.nanmean(self.t[1:] - self.t[:-1]))
+		self._T = float(self.t[-1] - self.t[0])
 
 		fileName = self._getCanonicalFileName(name, campaign, 'k2sff')
 		filePath = os.path.join(path, fileName)
@@ -289,8 +295,11 @@ class k2LC(libcarma.basicLC):
 					self.t[i] = float(words[0]) - self.startT
 				else:
 					self.t[i] = self.t[i - 1] + self.dt
-		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
-		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+		self._dt = float(self.t[1] - self.t[0])
+		self._mindt = float(np.nanmin(self.t[1:] - self.t[:-1]))
+		self._maxdt = float(np.nanmax(self.t[1:] - self.t[:-1]))
+		self._meandt = float(np.nanmean(self.t[1:] - self.t[:-1]))
+		self._T = float(self.t[-1] - self.t[0])
 
 		fileName = self._getCanonicalFileName(name, campaign, 'k2sc')
 		filePath = os.path.join(path, fileName)
@@ -340,8 +349,11 @@ class k2LC(libcarma.basicLC):
 					self.t[i] = float(words[0]) - self.startT
 				else:
 					self.t[i] = self.t[i - 1] + self.dt
-		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
-		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+		self._dt = float(self.t[1] - self.t[0])
+		self._mindt = float(np.nanmin(self.t[1:] - self.t[:-1]))
+		self._maxdt = float(np.nanmax(self.t[1:] - self.t[:-1]))
+		self._meandt = float(np.nanmean(self.t[1:] - self.t[:-1]))
+		self._T = float(self.t[-1] - self.t[0])
 
 		fileName = self._getCanonicalFileName(name, campaign, 'k2varcat')
 		filePath = os.path.join(path, fileName)
@@ -395,8 +407,11 @@ class k2LC(libcarma.basicLC):
 					self.t[i] = float(words[0]) - self.startT
 				else:
 					self.t[i] = self.t[i - 1] + self.dt
-		self._dt = float(np.nanmedian(self.t[1:] - self.t[:-1])) ## Increment between epochs.
-		self._T = self.t[-1] - self.t[0] ## Total duration of the light curve.
+		self._dt = float(self.t[1] - self.t[0])
+		self._mindt = float(np.nanmin(self.t[1:] - self.t[:-1]))
+		self._maxdt = float(np.nanmax(self.t[1:] - self.t[:-1]))
+		self._meandt = float(np.nanmean(self.t[1:] - self.t[:-1]))
+		self._T = float(self.t[-1] - self.t[0])
 
 		fileName = self._getCanonicalFileName(name, campaign, 'everest')
 		filePath = os.path.join(path, fileName)
@@ -483,6 +498,8 @@ class k2LC(libcarma.basicLC):
 			self._readK2VARCAT(name, self.campaign, path, self.processing)
 		elif self.processing in self.everest:
 			self._readEVEREST(name, self.campaign, path, self.processing)
+		else:
+			raise ValueError('Processing not found!')
 
 		for i in xrange(self._numCadences):
 			self.t[i] = self.t[i]/(1.0 + self.z)
