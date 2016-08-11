@@ -13,13 +13,13 @@
 
 
 
-file="./k08-stripe82quasars"
+file="k2List.dat"
 #file=$1
 echo ${file}
 #make directories
 camp="8"
-dir1="/Users/Jackster/Desktop/k2c0${camp}AGN/Vanderberg"
-dir2="/Users/Jackster/Desktop/k2c0${camp}AGN/KTeam"
+dir1="/home/jackeline/Documents/Research/code/k2/data/k2c0${camp}AGN/Vanderberg"
+dir2="/home/jackeline/Documents/Research/code/k2/data/k2c0${camp}AGN/KTeam"
 mkdir -p ${dir1}
 mkdir -p ${dir2}
 
