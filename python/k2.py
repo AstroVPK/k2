@@ -41,12 +41,15 @@ class k2LC(libcarma.basicLC):
 
 	def _getMAST(self, name, campaign, path, goid, gopi):
 		baseURL = 'http://archive.stsci.edu/pub/k2/lightcurves'
+		#
 		recordFile = 'k2List.dat'
 
 		fileName = self._getCanonicalFileName(name, campaign, 'mast')
 		fileNameFits = ''.join([fileName[0:-3], 'fits'])
+		fileNameDat = ''.join([fileName[0:-3], 'dat'])
 		filePath = os.path.join(path, fileName)
-		filePathFits = ''.join([filePath[0:-3], 'fits'])
+		filePathFits = os.path.join(path, fileNameFits)
+		filePathDat = os.path.join(path, fileNameDat)
 
 		if not os.path.isfile(filePathFits):
 			recordFilePath = os.path.join(path, recordFile)
@@ -57,18 +60,19 @@ class k2LC(libcarma.basicLC):
 			name2Dir = ''.join([name[4:6], '000'])
 			fullURL = '/'.join([baseURL, camp, name1Dir, name2Dir, fileNameFits])
 			result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath):
+		#if not os.path.isfile(filePath) and os.path.isfile(filePathDat):
 			#must source bash_profile to open a login terminal, necessary for Mac since there is no bashrc 
-			topcatString = ['source ~/.bash_profile;' , 'topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)]
-			subprocess.call(topcatString, shell=True)
-
+			#topcatString = ['source ~/.bash_profile;' , 'topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePathDat)]
+			#subprocess.call(topcatString, shell=True)
+		subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePathDat)])
 	def _getHLSP(self, name, campaign, path):
 		baseURL = 'http://archive.stsci.edu/missions/hlsp'
-
 		fileName = self._getCanonicalFileName(name, campaign, 'k2sff')
 		fileNameFits = ''.join([fileName[0:-3], 'fits'])
+		fileNameDat = ''.join([fileName[0:-3], 'dat'])
 		filePath = os.path.join(path, fileName)
 		filePathFits = os.path.join(path, fileNameFits)
+		filePathDat = os.path.join(path, fileNameDat)
 		if not os.path.isfile(filePathFits):
 			name1Dir = ''.join([name[0:4], '00000'])
 			name2Dir = name[4:]
@@ -79,41 +83,8 @@ class k2LC(libcarma.basicLC):
 				pass
 			else:
 				result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
-			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
-
-		fileName = self._getCanonicalFileName(name, campaign, 'k2sc')
-		fileNameFits = ''.join([fileName[0:-3], 'fits'])
-		filePath = os.path.join(path, fileName)
-		filePathFits = os.path.join(path, fileNameFits)
-		if not os.path.isfile(filePathFits):
-			name1Dir = ''.join([name[0:4], '00000'])
-			fullURL = '/'.join([baseURL, 'k2sc', campaign, name1Dir, fileNameFits])
-			try:
-				ret = urllib2.urlopen(fullURL)
-			except urllib2.HTTPError:
-				pass
-			else:
-				result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
-			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
-
-		fileName = self._getCanonicalFileName(name, campaign, 'k2varcat')
-		fileNameFits = ''.join([fileName[0:-3], 'fits'])
-		filePath = os.path.join(path, fileName)
-		filePathFits = os.path.join(path, fileNameFits)
-		if not os.path.isfile(filePathFits):
-			name1Dir = ''.join([name[0:4], '00000'])
-			name2Dir = ''.join([name[4:6], '000'])
-			fullURL = '/'.join([baseURL, 'k2varcat', campaign, name1Dir, name2Dir, fileNameFits])
-			try:
-				ret = urllib2.urlopen(fullURL)
-			except urllib2.HTTPError:
-				pass
-			else:
-				result = urllib.urlretrieve(fullURL, filePathFits)
-		if not os.path.isfile(filePath) and os.path.isfile(filePathFits):
-			subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePath)])
+		#if not os.path.isfile(filePath) and os.path.isfile(filePathDat):
+		subprocess.call(['topcat', '-stilts', 'tcopy',  'in=%s'%(filePathFits), 'ofmt=ascii', 'out=%s'%(filePathDat)])
 
 	def _readMAST(self, name, campaign, path, processing):
 		fileName = self._getCanonicalFileName(name, campaign, processing)
