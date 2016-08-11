@@ -12,7 +12,7 @@ import copy as copy
 import time as time
 import pdb
 import os as os
-
+import random
 import k2
 import libcarma as libcarma
 import util.mcmcviz as mcmcviz
@@ -114,6 +114,8 @@ if (args.qMin < 0):
 LC = k2.k2LC(name = args.id, band = 'Kep', processing = args.processing, campaign = args.campaign, goid = args.goid, gopi = args.gopi)
 #/Users/Jackster/Research/k2Analysis/k2c08AGN/Vanderberg
 
+
+
 LC.minTimescale = args.minTimescale
 LC.maxTimescale = args.maxTimescale
 LC.maxSigma = args.maxSigma
@@ -141,7 +143,7 @@ for p in xrange(args.pMin, args.pMax + 1):
 		taskDict['%d %d'%(p, q)] = nt
 		#save Theta vector for walker 10 at step 15
 		#print r'Theta: ' + str(nt.Chain[:,10, 15])
-		np.savetxt('testwalkers.txt',nt.Chain[:,:,100:])
+		#np.savetxt('testwalkers.txt', nt.Chain[:,:,100:])
 		#print r'Rho: ' + str(nt.rootChain[:,10, 200:])
 		irand = random.randint(0 , args.nwalkers -1)
 		print r'Tau: ' + str(nt.timescaleChain[:,irand, -1])
@@ -154,7 +156,7 @@ for p in xrange(args.pMin, args.pMax + 1):
 		for u in xrange(0, p):
 			labelList.append('b$_{%d}$'%(u))	
 		print labelList
-		figTitle = args.name	
+		figTitle = args.id	
 		#plot_res =  mcmcviz.vizTriangle(p, q, nt.Chain, labelList, figTitle+'%d_%d'%(p, q))
 		iRandom = random.randint( 0, args.nwalkers -1  )
 		#print r'Tau: ' + str(nt.timescaleChain[:, iRandom,  -1])
@@ -184,7 +186,7 @@ print 'Best model is C-ARMA(%d,%d)'%(pBest, qBest)
 bestTask = taskDict['%d %d'%(pBest, qBest)]
 
 
-fileOut = open( args.name + "__results" , "w" )
+fileOut = open( args.id + "__results" , "w" )
 mW = maxWidth( dataForResultsFile) 
 mS = maxSize( dataForResultsFile ) 
 fileOut.write( "#p, q, timescales, DIC [repeated]\n")
