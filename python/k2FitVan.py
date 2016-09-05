@@ -197,6 +197,43 @@ for i in range( mS ):
 	fileOut.write( line +"\n") 
 fileOut.close() 
 
+Theta = bestTask.Chain[:,np.where(bestTask.LnPosterior == np.max(bestTask.LnPosterior))[0][0],np.where(bestTask.LnPosterior == np.max(bestTask.LnPosterior))[1][0]]
+nt = libcarma.basicTask(pBest, qBest)
+nt.set(LC.dt, Theta)
+nt.smooth(LC)
+LC.plot()
+# find a way to save lc and change color lcfig.savefig('testLC.png')
+#----------------plotting timescale triangle
+labelList = []
+labelT = []
+labelRoots = []
+for k in xrange(1, pBest + 1):
+	labelList.append('a$_{%d}$'%(k))
+	labelT.append('$\tao_{%d}$'%(k))
+	labelRoots.append('r$_{%d}$'%(k))
+for u in xrange(0, pBest):
+	labelList.append('b$_{%d}$'%(u))	
+	labelT.append('$\tao_{MA%d}$'%(u))
+	labelRoots.append('r$_{MA%d}$'%(u))
+print labelList
+figTitle = args.id	
+#plot_res =  mcmcviz.vizTriangle(p, q, nt.Chain, labelList, figTitle+'%d_%d'%(p, q))
+#res = mcmcviz.vizWalkers(taskDict['%d %d'%(pBest, qBest)].timescaleChain, taskDict['%d %d'%(pBest, qBest)].LnPosterior, dim1, dim1Name, dim2, dim2Name)
+
+res_coeffs = mcmcviz.vizTriangle(pBest, qBest, taskDict['%d %d'%(pBest, qBest)].Chain,labelList, figTitle+'Chain'+'%d_%d'%(pBest, qBest))
+res_times = mcmcviz.vizTriangle(pBest, qBest, taskDict['%d %d'%(pBest, qBest)].timescaleChain,labelList, figTitle+'Timescales'+'%d_%d'%(pBest, qBest))
+
+
+plt.figure(1, figsize = (fwid, fhgt))
+lagsEst, sfEst, sferrEst = LC.sf()
+lagsModel, sfModel = bestTask.sf(start = lagsEst[1], stop = lagsEst[-1], num = 5000, spacing = 'log')
+plt.loglog(lagsModel, sfModel, label = r'$SF(\delta t)$ (model)', color = '#000000', zorder = 5)
+plt.errorbar(lagsEst, sfEst, sferrEst, label = r'$SF(\delta t)$ (est)', fmt = 'o', capsize = 0, color = '#ff7f00', markeredgecolor = 'none', zorder = 0)
+plt.xlabel(r'$\log_{10}\delta t$')
+plt.ylabel(r'$\log_{10} SF$')
+plt.legend(loc = 2)
+plt.show()
+
 
 if args.stop:
 	pdb.set_trace()
