@@ -56,8 +56,8 @@ home = os.environ['HOME']
 outpath = os.path.join(home, 'Desktop', 'k2BADAnalysis', agn_name)
 if not os.path.isdir(outpath):
     os.mkdir(outpath)
-maxColors = 12
-primary = brewer2mpl.get_map('Paired', 'Qualitative', maxColors).hex_colors
+maxColors = min(len(starList), 9)
+primary = brewer2mpl.get_map('Set1', 'Qualitative', maxColors).hex_colors
 save = True
 dpi = 300
 
