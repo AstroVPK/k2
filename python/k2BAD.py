@@ -43,11 +43,14 @@ starList = ['220180454',
 
 try:
     agnLC_raw = kali.k2.k2LC(name=agn_name, campaign=agn_campaign, processing='raw', path=outpath)
+    agnLC_raw = (agnLC_raw - agnLC_raw.mean)/agnLC_raw.std
     starLCList_raw = list()
     for star in starList:
         try:
-            starLCList_raw.append(kali.k2.k2LC(name=star, campaign=agn_campaign, processing='raw',
-                                               path=outpath))
+            starLC = kali.k2.k2LC(name=star, campaign=agn_campaign, processing='raw',
+                                  path=outpath)
+            starLC = (starLC - starLC.mean)/starLC.std
+            starLCList_raw.append(starLC)
         except ValueError:
             pass
 except ValueError:
@@ -56,11 +59,14 @@ except ValueError:
 
 try:
     agnLC_mast = kali.k2.k2LC(name=agn_name, campaign=agn_campaign, processing='mast', path=outpath)
+    agnLC_mast = (agnLC_mast - agnLC_mast.mean)/agnLC_mast.std
     starLCList_mast = list()
     for star in starList:
         try:
-            starLCList_mast.append(kali.k2.k2LC(name=star, campaign=agn_campaign, processing='mast',
-                                                path=outpath))
+            starLC = kali.k2.k2LC(name=star, campaign=agn_campaign, processing='mast',
+                                  path=outpath)
+            starLC = (starLC - starLC.mean)/starLC.std
+            starLCList_mast.append(starLC)
         except:
             pass
 except ValueError:
