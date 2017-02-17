@@ -15,11 +15,13 @@ plt.ion()
 agn_name = '220180147'
 agn_campaign = 'c08'
 home = os.environ['HOME']
-outpath = os.path.join(home, 'Desktop', 'k2BADAnalysis')
+outpath = os.path.join(home, 'Desktop', 'k2BADAnalysis', agn_name)
 if not os.path.isdir(outpath):
     os.mkdir(outpath)
 maxColors = 12
 primary = brewer2mpl.get_map('Paired', 'Qualitative', maxColors).hex_colors
+save = True
+dpi = 300
 
 starList = ['220180454',
             '220180018',
@@ -90,15 +92,21 @@ fig_raw = agnLC_raw.plot(fig=100, colory=r'#000000', labely='AGN: ' + agnLC_raw.
 for num, starLC in enumerate(starLCList_raw):
     if num < maxColors:
         starLC.plot(fig=100, colory=primary[num], labely='Star: ' + starLC.name, alphay=0.2, clearFig=False)
+if save:
+    fig_raw.savefig(os.path.join(outpath, agnLC_raw.name + '_raw.jpg'), dpi=dpi)
 
 fig_mast = agnLC_mast.plot(fig=200, colory=r'#000000', labely='AGN: ' + agnLC_mast.name)
 for num, starLC in enumerate(starLCList_mast):
     if num < maxColors:
         starLC.plot(fig=200, colory=primary[num], labely='Star: ' + starLC.name, alphay=0.2, clearFig=False)
+if save:
+    fig_mast.savefig(os.path.join(outpath, agnLC_mast.name + '_mast.jpg'), dpi=dpi)
 
 fig_vj = agnLC_vj.plot(fig=300, colory=r'#000000', labely='AGN: ' + agnLC_vj.name)
 for num, starLC in enumerate(starLCList_vj):
     if num < maxColors:
         starLC.plot(fig=300, colory=primary[num], labely='Star: ' + starLC.name, alphay=0.2, clearFig=False)
+if save:
+    fig_vj.savefig(os.path.join(outpath, agnLC_vj.name + '_vj.jpg'), dpi=dpi)
 
 pdb.set_trace()
