@@ -12,17 +12,8 @@ import kali.k2
 
 plt.ion()
 
+'''
 agn_name = '220180147'
-agn_campaign = 'c08'
-home = os.environ['HOME']
-outpath = os.path.join(home, 'Desktop', 'k2BADAnalysis', agn_name)
-if not os.path.isdir(outpath):
-    os.mkdir(outpath)
-maxColors = 12
-primary = brewer2mpl.get_map('Paired', 'Qualitative', maxColors).hex_colors
-save = True
-dpi = 300
-
 starList = ['220180454',
             '220180018',
             '220179459',
@@ -42,6 +33,33 @@ starList = ['220180454',
             '220179064',
             '229228948',
             '220181652']
+'''
+
+agn_name = '220192831'
+starList = ['220189614',
+            '220190878',
+            '220191866',
+            '220191893',
+            '220192000',
+            '220192033',
+            '220192212',
+            '220193472',
+            '220193776',
+            '220194432',
+            '220194658',
+            '220194788',
+            '220194794',
+            '220195199']
+
+agn_campaign = 'c08'
+home = os.environ['HOME']
+outpath = os.path.join(home, 'Desktop', 'k2BADAnalysis', agn_name)
+if not os.path.isdir(outpath):
+    os.mkdir(outpath)
+maxColors = 12
+primary = brewer2mpl.get_map('Paired', 'Qualitative', maxColors).hex_colors
+save = True
+dpi = 300
 
 try:
     agnLC_raw = kali.k2.k2LC(name=agn_name, campaign=agn_campaign, processing='raw', path=outpath)
